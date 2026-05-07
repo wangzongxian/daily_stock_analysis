@@ -87,12 +87,13 @@ class SystemConfigService:
 
     _LLM_CAPABILITY_ORDER: Tuple[str, ...] = ("json", "tools", "stream", "vision")
     _LLM_STREAM_CHUNK_LIMIT = 8
+    # 仅对现有复现与回归样本中的上游拦截文案做 best-effort 识别（来源：Issue #1223 复现日志 + 回归覆盖）；
+    # 该分类只用于诊断展示，不作为配置迁移或清理触发条件。
     _LLM_PROVIDER_BLOCKED_TOKENS: Tuple[str, ...] = (
         "your request was blocked",
-        "request was blocked",
-        "request has been blocked",
-        "request is blocked",
-        "request blocked",
+        "request was blocked by safety",
+        "request was blocked by policy",
+        "request has been blocked by provider safety",
         "blocked by safety",
         "blocked by policy",
         "blocked by content",
@@ -2676,7 +2677,7 @@ class SystemConfigService:
 
     @staticmethod
     def _has_provider_blocked_signal(text: str) -> bool:
-        """Match known upstream provider/gateway blocked signals for diagnostic classification.
+        """Match explicit upstream provider/gateway blocked signals for diagnostic classification.
 
         These markers are only used to surface a dedicated `request_blocked` reason
         in runtime checks and do not mutate or migrate persisted user config.

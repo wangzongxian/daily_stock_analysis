@@ -1415,6 +1415,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
             (Exception("request was blocked by policy"), "request_blocked", "provider_blocked"),
             (Exception("This request has been blocked by provider safety policy."), "request_blocked", "provider_blocked"),
             (Exception("moderation_blocked"), "request_blocked", "provider_blocked"),
+            (Exception("Request was blocked by local firewall rule."), "network_error", "unknown_error"),
             (Exception("LLM Provider NOT provided for model foo"), "model_not_found", "provider_prefix_mismatch"),
         ]
 
@@ -1504,6 +1505,12 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         blocked_response.json.return_value = {"error": {"message": "Your request was blocked."}}
         blocked_by_policy_response = Mock(ok=False, status_code=403, text="Request has been blocked by policy filter.")
         blocked_by_policy_response.json.return_value = {"error": {"message": "Request has been blocked by policy filter."}}
+        blocked_by_firewall_response = Mock(
+            ok=False,
+            status_code=400,
+            text="Request was blocked by local firewall policy.",
+        )
+        blocked_by_firewall_response.json.return_value = {"error": {"message": "Request was blocked by local firewall policy."}}
         invalid_json_response = Mock(ok=True, status_code=200, text="<html>bad gateway</html>")
         invalid_json_response.json.side_effect = ValueError("invalid json")
 
@@ -1516,6 +1523,13 @@ class SystemConfigServiceTestCase(unittest.TestCase):
             (rate_limit_response, "quota", "model_discovery", True, "rate_limit"),
             (blocked_response, "request_blocked", "model_discovery", False, "provider_blocked"),
             (blocked_by_policy_response, "request_blocked", "model_discovery", False, "provider_blocked"),
+            (
+                blocked_by_firewall_response,
+                "network_error",
+                "model_discovery",
+                False,
+                "http_error",
+            ),
             (invalid_json_response, "format_error", "response_parse", False, "non_json"),
         ]:
             with self.subTest(error_code=error_code):
