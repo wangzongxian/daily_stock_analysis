@@ -11,7 +11,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import litellm
 from litellm import Router
@@ -102,6 +102,28 @@ _CUSTOM_MODEL_PRICING: Dict[str, dict] = {
     },
 }
 
+_FALLBACK_MODEL_PRICING: Dict[str, Any] = {
+    "supports_function_calling": True,
+    "supports_vision": False,
+    "supports_audio_input": False,
+    "supports_audio_output": False,
+    "context_window": 100000,
+    "max_tokens": 10000,
+    "input_cost_per_token": 0.0,
+    "output_cost_per_token": 0.0,
+}
+_FALLBACK_MODEL_PRICING_REGISTERED: set[str] = set()
+
+
+def _split_provider_model(model: str) -> Tuple[str, str]:
+    normalized = (model or "").strip()
+    if not normalized:
+        return "", ""
+    if "/" in normalized:
+        provider, remainder = normalized.split("/", 1)
+        return provider.lower(), remainder.strip()
+    return "openai", normalized
+
 
 def _model_matches(model: str, entries: List[str]) -> bool:
     """Check if model name matches any entry (exact or prefix with version suffix)."""
@@ -178,7 +200,6 @@ class LLMToolAdapter:
                 logger.debug(f"Registered custom pricing for {model_name}")
             except Exception as e:
                 logger.debug(f"Model {model_name} may already be registered or pricing error: {e}")
-
     def _has_channel_config(self) -> bool:
         """Check if multi-channel config (channels / YAML) is active."""
         return bool(self._config.llm_model_list) and not all(
@@ -596,3 +617,30 @@ class LLMToolAdapter:
             model=model,
             raw=response,
         )
+
+
+def register_fallback_model_pricing(models: Iterable[str]) -> None:
+    """Register zero-cost pricing for unknown OpenAI-compatible models."""
+    if not models:
+        return
+    LLMToolAdapter._register_custom_model_pricing()
+    register = getattr(litellm, "register_model", None)
+    if not callable(register):
+        return
+    cost_map = getattr(litellm, "model_cost", {})
+    if not isinstance(cost_map, dict):
+        cost_map = {}
+    for model in models:
+        provider, wire_model = _split_provider_model(str(model))
+        if provider != "openai":
+            continue
+        if not wire_model or wire_model.startswith("__legacy_"):
+            continue
+        if wire_model in cost_map or wire_model in _FALLBACK_MODEL_PRICING_REGISTERED:
+            continue
+        try:
+            register({wire_model: dict(_FALLBACK_MODEL_PRICING)})
+            _FALLBACK_MODEL_PRICING_REGISTERED.add(wire_model)
+            logger.debug("Registered fallback pricing for %s", wire_model)
+        except Exception as exc:
+            logger.debug("Fallback pricing registration skipped for %s: %s", wire_model, exc)
