@@ -8,7 +8,7 @@ import json
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional
 
 
 def _coerce_bool(value: Any, *, field_name: str, default: bool = False) -> bool:
@@ -176,7 +176,7 @@ class ActionResult:
         }
 
 
-ActionHandler = Callable[[Dict[str, Any], ActionContext], Any]
+ActionHandler = Callable[[Mapping[str, Any], ActionContext], Any]
 
 
 @dataclass
@@ -197,6 +197,6 @@ def new_run_id() -> str:
     return f"run_{uuid.uuid4().hex}"
 
 
-def stable_input_hash(payload: Dict[str, Any]) -> str:
-    encoded = json.dumps(payload or {}, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
+def stable_input_hash(payload: Mapping[str, Any]) -> str:
+    encoded = json.dumps(dict(payload or {}), ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()

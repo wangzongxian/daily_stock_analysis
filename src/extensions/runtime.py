@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import time
+from collections.abc import Mapping
 from typing import Any, Dict, Optional
 
 from src.extensions.actions import (
@@ -41,17 +42,19 @@ class ExtensionRuntime:
         async_mode: Optional[bool] = None,
     ) -> ActionResult:
         run_id = new_run_id()
-        try:
-            payload = dict(payload or {})
-        except (TypeError, ValueError) as exc:
+        if payload is None:
+            payload = {}
+        elif not isinstance(payload, Mapping):
             return self._failure(
                 action_id,
                 run_id,
                 "invalid_input",
                 "Action payload must be a mapping.",
                 None,
-                {"exception_type": exc.__class__.__name__},
+                {"payload_type": type(payload).__name__},
             )
+        else:
+            payload = dict(payload)
         input_hash = stable_input_hash(payload)
         action = self.registry.get_action(action_id)
         if action is None:

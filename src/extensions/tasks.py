@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, Callable, Dict
 
 from src.extensions.actions import ActionContext, ActionDefinition
@@ -17,7 +18,7 @@ class ActionTaskRunner:
         self,
         *,
         action: ActionDefinition,
-        payload: Dict[str, Any],
+        payload: Mapping[str, Any],
         context: ActionContext,
         run_id: str,
         run_callable: Callable[[], Dict[str, Any]],

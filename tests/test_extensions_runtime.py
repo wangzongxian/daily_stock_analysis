@@ -92,6 +92,22 @@ class ExtensionRuntimeTestCase(unittest.TestCase):
         self.assertEqual(result.data["caller"], "web")
         self.assertEqual(len(result.input_hash), 64)
 
+    def test_execute_sync_rejects_non_mapping_payloads(self):
+        for payload in ([], "", 0, 0.0):
+            payload_type = type(payload).__name__
+            result = self._runtime().execute_action("test.echo", payload, {"caller": "web"}, async_mode=False)
+
+            self.assertFalse(result.ok)
+            self.assertEqual(result.error.code, "invalid_input")
+            self.assertEqual(result.error.message, "Action payload must be a mapping.")
+            self.assertEqual(result.status, "failed")
+            self.assertEqual(result.error.details["payload_type"], payload_type)
+
+    def test_execute_sync_accepts_none_payload_as_empty_object(self):
+        result = self._runtime().execute_action("test.echo", None, {"caller": "web"}, async_mode=False)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.status, "completed")
+
     def test_structured_errors_for_missing_permission_depth_timeout_and_handler(self):
         missing = ExtensionRuntime().execute_action("missing.action")
         denied = self._runtime(guard=ActionPermissionGuard(allowed_actions={"other.action"})).execute_action("test.echo")
