@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import math
 import time
 from collections.abc import Mapping
 from typing import Any, Dict, Optional
@@ -180,6 +181,10 @@ class ExtensionRuntime:
             executor.shutdown(wait=False)
 
     def _preflight(self, action, payload, context, run_id, input_hash):
+        try:
+            self._validate_context(context)
+        except ActionRuntimeError as exc:
+            return self._failure(action.action_id, run_id, exc.code, "Action context is invalid.", input_hash, exc.details)
         plugin_failure = self._check_plugin_status(action, run_id, input_hash)
         if plugin_failure is not None:
             return plugin_failure
@@ -304,8 +309,25 @@ class ExtensionRuntime:
         )
 
     @staticmethod
+    def _validate_context(context):
+        budget_timeout = context.budget.timeout_seconds
+        if not isinstance(budget_timeout, (int, float)) or not math.isfinite(float(budget_timeout)):
+            raise ActionRuntimeError(
+                "invalid_context",
+                "Action context budget timeout_seconds must be a finite number.",
+                timeout_seconds=budget_timeout,
+            )
+        if budget_timeout < 0:
+            raise ActionRuntimeError(
+                "invalid_context",
+                "Action context budget timeout_seconds must be non-negative.",
+                timeout_seconds=budget_timeout,
+            )
+
+    @staticmethod
     def _timeout_seconds(action, context):
         budget_timeout = context.budget.timeout_seconds
+        ExtensionRuntime._validate_context(context)
         return action.timeout_seconds if budget_timeout <= 0 else min(action.timeout_seconds, budget_timeout)
 
     @staticmethod

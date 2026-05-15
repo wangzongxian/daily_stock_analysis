@@ -29,6 +29,8 @@ For English contributors: please fill in English. All fields marked (EN) accept 
 - `Refs #<issue_number>` / umbrella issue / 多个子任务拆分场景（本 PR 属于分阶段推进时使用）。**umbrella issue 不要使用 Fixes，避免自动关闭总 issue** / For umbrella/split-plan issues, use `Refs` and avoid `Fixes` to prevent auto-closing parent issue.
 - 无 Issue 时说明原因与验收标准 / If no issue, explain the motivation and acceptance criteria
 
+> 拆分场景（如 #1309）请固定填写 `Refs #<issue_number>`，除非本 PR 直接闭环且无需后续子任务，否则不得使用 `Fixes / Closes` 触发自动关闭。
+
 示例 / Example:
 
 - #1309 为 umbrella issue 分解场景：`Refs #1309`
@@ -57,6 +59,7 @@ python -m pytest -m "not network"
 - 如本 PR 为拆分任务（如 #1309），先填以下结论可减少审查歧义：
   - 本 PR 未新增/修改 `provider`、`model`、`Base URL`、`litellm_model`、`llm_model_list`、LiteLLM/LLM 运行时默认值，也未新增 `.env` 配置迁移或运行时保存/清理/回填逻辑。
   - 本轮未改动 `src/config.py`、`.env.example`、LLM provider/model/Base URL 默认值与 provider/list 配置清理/回填路径；兼容性风险判断以本次 `tests/test_extensions_runtime.py` 与 CI 结果为准。
+  - 当前检测命中来自兼容性说明文本/既有关键词，不代表本 PR 新增模型/API 配置语义变更；如未改动 provider/model/Base URL/配置清理链路，请在结论中明确写明 `本 PR 未改动`。
   - 若外部模型/API 兼容检测有命中，多为仓库既有文档/说明里的关键词导致的静态告警，不代表本轮改动引入了新的模型/API 兼容语义或迁移；实际影响仅为现有运行时路径的常规回归覆盖范围。
   - 本 PR 回退路径：版本回滚到上一个版本（`revert this PR`），无须执行配置补偿步骤。
 

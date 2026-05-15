@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -33,9 +34,12 @@ def _coerce_float(value: Any, *, field_name: str, default: float) -> float:
     if value is None:
         return default
     try:
-        return float(value)
+        coerced = float(value)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{field_name} must be a number") from exc
+    if not math.isfinite(coerced):
+        raise ValueError(f"{field_name} must be a finite number")
+    return coerced
 
 
 def _coerce_int(value: Any, *, field_name: str, default: int) -> int:
@@ -66,12 +70,15 @@ class ActionBudget:
             raise ValueError("budget must be a mapping when provided")
         else:
             data = dict(value)
+        timeout_seconds = _coerce_float(
+            data.get("timeout_seconds"),
+            field_name="budget.timeout_seconds",
+            default=0,
+        )
+        if timeout_seconds < 0:
+            raise ValueError("budget.timeout_seconds must be >= 0")
         return cls(
-            timeout_seconds=_coerce_float(
-                data.get("timeout_seconds"),
-                field_name="budget.timeout_seconds",
-                default=0,
-            ),
+            timeout_seconds=timeout_seconds,
             max_llm_calls=_coerce_int(
                 data.get("max_llm_calls"),
                 field_name="budget.max_llm_calls",

@@ -17,6 +17,7 @@ from src.extensions import (
     ExtensionRuntime,
     create_builtin_extension_runtime,
 )
+from src.extensions.actions import ActionBudget
 from src.extensions.permissions import ActionPermissionGuard
 from src.extensions.registry import PluginDefinition, PluginStatus
 from src.extensions.tasks import ActionTaskRunner
@@ -313,6 +314,26 @@ class ExtensionRuntimeTestCase(unittest.TestCase):
             self.assertEqual(result.error.code, "invalid_context")
             self.assertEqual(result.error.message, "Action context is invalid.")
             self.assertEqual(result.error.details["exception_type"], "TypeError")
+
+    def test_invalid_context_rejects_negative_or_non_finite_timeout_budget(self):
+        for timeout_seconds in (-1, float("inf"), float("nan")):
+            context = {"budget": {"timeout_seconds": timeout_seconds}}
+            result = self._runtime().execute_action("test.echo", context=context)
+
+            self.assertFalse(result.ok)
+            self.assertEqual(result.error.code, "invalid_context")
+            self.assertEqual(result.error.message, "Action context is invalid.")
+            self.assertEqual(result.error.details["exception_type"], "ValueError")
+
+        runtime = self._runtime()
+        runtime_result = runtime.execute_action(
+            "test.echo",
+            context=ActionContext(caller="web", budget=ActionBudget(timeout_seconds=-1)),
+        )
+        self.assertFalse(runtime_result.ok)
+        self.assertEqual(runtime_result.error.code, "invalid_context")
+        self.assertEqual(runtime_result.error.message, "Action context is invalid.")
+        self.assertEqual(runtime_result.error.details["timeout_seconds"], -1)
 
     def test_dry_run_validates_without_invoking_handler(self):
         calls = []
