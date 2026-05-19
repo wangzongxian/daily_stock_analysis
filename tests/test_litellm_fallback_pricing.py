@@ -175,3 +175,44 @@ class LiteLLMFallbackPricingTestCase(unittest.TestCase):
 
         self.assertEqual(result.content, "agent ok")
         self.assertEqual(events[:2], [("register", ["openai/mimo-router"]), ("router", "mimo_alias")])
+
+    def test_llm_tool_adapter_registers_fallback_pricing_for_router_wire_models(self) -> None:
+        adapter = llm_adapter.LLMToolAdapter.__new__(llm_adapter.LLMToolAdapter)
+        adapter._config = _fake_agent_config(
+            litellm_model="mimo_alias",
+            llm_model_list=[
+                {
+                    "model_name": "mimo_alias",
+                    "litellm_params": {"model": "openai/mimo-alpha"},
+                },
+                {
+                    "model_name": "mimo_alias",
+                    "litellm_params": {"model": "openai/mimo-beta"},
+                },
+            ],
+        )
+        adapter._legacy_router_model_list = []
+
+        events = []
+
+        def _register(models):
+            events.append(("register", list(models)))
+
+        def _router_completion(**_kwargs):
+            events.append(("router", _kwargs["model"]))
+            return _fake_litellm_response()
+
+        adapter._router = SimpleNamespace(completion=_router_completion)
+
+        with patch.object(llm_adapter, "register_fallback_model_pricing", side_effect=_register):
+            result = adapter._call_litellm_model(
+                [{"role": "user", "content": "hi"}],
+                [],
+                "mimo_alias",
+            )
+
+        self.assertEqual(result.content, "agent ok")
+        self.assertEqual(
+            events[:2],
+            [("register", ["openai/mimo-alpha", "openai/mimo-beta"]), ("router", "mimo_alias")],
+        )

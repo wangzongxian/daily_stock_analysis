@@ -164,6 +164,39 @@ def get_thinking_extra_body(model: str) -> Optional[dict]:
     return _get_opt_in_payload(model, _OPT_IN_THINKING_MODELS)
 
 
+def resolve_fallback_litellm_wire_models(
+    model: str,
+    model_list: Optional[List[Dict[str, Any]]] = None,
+) -> List[str]:
+    """Resolve all wire models reachable from a configured alias."""
+    normalized_model = (model or "").strip()
+    if not normalized_model:
+        return []
+
+    resolved: List[str] = []
+    if model_list:
+        for entry in model_list:
+            if not isinstance(entry, dict):
+                continue
+            entry_model_name = str(entry.get("model_name", "") or "").strip()
+            if not entry_model_name:
+                entry_params = entry.get("litellm_params", {}) or {}
+                entry_model_name = str(entry_params.get("model") or "").strip()
+            if entry_model_name != normalized_model:
+                continue
+
+            entry_params = entry.get("litellm_params", {}) or {}
+            wire_model = str(entry_params.get("model") or normalized_model).strip()
+            if wire_model and wire_model not in resolved:
+                resolved.append(wire_model)
+
+    if not resolved:
+        wire_model = resolve_litellm_wire_model(normalized_model, model_list)
+        if wire_model and wire_model not in resolved:
+            resolved.append(wire_model)
+    return resolved
+
+
 # ============================================================
 # LLM Tool Adapter
 # ============================================================
@@ -464,9 +497,9 @@ class LLMToolAdapter:
             self._get_temperature() if temperature is None else temperature,
             model_list=recovery_model_list,
         )
-        register_fallback_model_pricing([
-            resolve_litellm_wire_model(model, self._config.llm_model_list)
-        ])
+        register_fallback_model_pricing(
+            resolve_fallback_litellm_wire_models(model, self._config.llm_model_list)
+        )
         if use_channel_router and self._router and model in _router_model_names:
             # Channel / YAML path: Router manages all models in its model_list
             response = call_litellm_with_param_recovery(

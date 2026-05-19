@@ -740,10 +740,21 @@ class SystemConfigService:
 
         try:
             import litellm
-            from src.agent.llm_adapter import register_fallback_model_pricing
+            from src.agent.llm_adapter import (
+                resolve_fallback_litellm_wire_models,
+                register_fallback_model_pricing,
+            )
 
             # Register fallback pricing for OpenAI-compatible models to prevent cost calculation errors
-            register_fallback_model_pricing([resolved_model])
+            config_model_list = None
+            if getattr(self, "_config", None) is not None:
+                config_model_list = getattr(self._config, "llm_model_list", None)
+            register_fallback_model_pricing(
+                resolve_fallback_litellm_wire_models(
+                    resolved_model,
+                    config_model_list,
+                )
+            )
 
             started_at = time.perf_counter()
             response = call_litellm_with_param_recovery(
