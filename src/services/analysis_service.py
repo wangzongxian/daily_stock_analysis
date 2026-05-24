@@ -24,6 +24,7 @@ from src.report_language import (
 )
 from src.services.run_diagnostics import (
     activate_run_diagnostic_context,
+    build_run_diagnostic_summary,
     get_current_diagnostic_context,
     reset_run_diagnostic_context,
 )
@@ -162,6 +163,17 @@ class AnalysisService:
         stock_name = get_localized_stock_name(getattr(result, "name", None), result.code, report_language)
         diagnostic_context = get_current_diagnostic_context()
         trace_id = diagnostic_context.trace_id if diagnostic_context is not None else query_id
+        diagnostic_snapshot = diagnostic_context.snapshot() if diagnostic_context is not None else None
+        diagnostic_summary = build_run_diagnostic_summary(
+            context_snapshot={
+                "diagnostics": diagnostic_snapshot,
+                "news_content": getattr(result, "news_summary", None),
+            },
+            raw_result=result.to_dict() if hasattr(result, "to_dict") else None,
+            report_saved=True,
+            query_id=query_id,
+            stock_code=result.code,
+        )
         
         # 构建报告结构
         report = {
@@ -203,4 +215,5 @@ class AnalysisService:
             "stock_code": result.code,
             "stock_name": stock_name,
             "report": report,
+            "diagnostic_summary": diagnostic_summary,
         }

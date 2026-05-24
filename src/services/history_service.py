@@ -30,6 +30,7 @@ from src.report_language import (
     normalize_report_language,
 )
 from src.storage import DatabaseManager
+from src.services.run_diagnostics import build_run_diagnostic_summary
 from src.utils.data_processing import normalize_model_used, parse_json_field
 
 if TYPE_CHECKING:
@@ -198,6 +199,32 @@ class HistoryService:
         except Exception as e:
             logger.error(f"resolve_and_get_news failed for {record_id}: {e}", exc_info=True)
             return []
+
+    def resolve_and_get_diagnostics(self, record_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Resolve record_id and return a user-facing run diagnostic summary.
+
+        Legacy records without diagnostic snapshots return an ``unknown``
+        summary instead of failing.
+        """
+        try:
+            record = self._resolve_record(record_id)
+            if not record:
+                return None
+            detail = self._record_to_detail_dict(record)
+            return build_run_diagnostic_summary(
+                context_snapshot=detail.get("context_snapshot"),
+                raw_result=detail.get("raw_result"),
+                report_saved=True,
+                query_id=detail.get("query_id"),
+                stock_code=detail.get("stock_code"),
+            )
+        except Exception as e:
+            logger.error(f"resolve_and_get_diagnostics failed for {record_id}: {e}", exc_info=True)
+            return build_run_diagnostic_summary(
+                report_saved=None,
+                query_id=record_id,
+            )
 
     def get_history_detail_by_id(self, record_id: int) -> Optional[Dict[str, Any]]:
         """
