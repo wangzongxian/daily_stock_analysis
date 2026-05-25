@@ -200,7 +200,7 @@ function formatEnvBackupFilename(isDesktopRuntime: boolean) {
   return `${isDesktopRuntime ? 'dsa-desktop-env' : 'dsa-env'}_${date}_${time}.env`;
 }
 
-const TRUSTED_ALPHASIFT_INSTALL_SPEC = 'git+https://github.com/ZhuLinsen/alphasift.git';
+const TRUSTED_ALPHASIFT_INSTALL_SPEC = 'git+https://github.com/ZhuLinsen/alphasift.git@2c76b2b6074ae3bae01d52e5e830a4af3e3246b2';
 
 const SettingsPage: React.FC = () => {
   const { authEnabled, passwordChangeable } = useAuth();
@@ -475,9 +475,6 @@ const SettingsPage: React.FC = () => {
     setEnvBackupActionSuccess('');
     setIsUpdatingAlphaSift(true);
     try {
-      if (nextEnabled) {
-        await alphasiftApi.install();
-      }
       await systemConfigApi.update({
         configVersion,
         maskToken,
@@ -486,6 +483,9 @@ const SettingsPage: React.FC = () => {
       });
       notifyAlphaSiftConfigChanged();
       await refreshAfterExternalSave(['ALPHASIFT_ENABLED']);
+      if (nextEnabled) {
+        await alphasiftApi.install();
+      }
       setEnvBackupActionSuccess(nextEnabled ? '已开启 AlphaSift 选股，并完成依赖检查。' : '已关闭 AlphaSift 选股。');
     } catch (error: unknown) {
       setEnvBackupActionError(getParsedApiError(error));
@@ -649,7 +649,7 @@ const SettingsPage: React.FC = () => {
                     </p>
                     {!alphasiftInstallSpecAllowed ? (
                       <p className="mt-1 text-xs leading-6 text-amber-700 dark:text-amber-300">
-                        请把 ALPHASIFT_INSTALL_SPEC 配置为 git+https://github.com/ZhuLinsen/alphasift.git；本地路径或 wheel 需先手动安装。
+                        请把 ALPHASIFT_INSTALL_SPEC 配置为受信任的固定 GitHub commit；本地路径或 wheel 需先手动安装。
                       </p>
                     ) : null}
                     <p className="mt-2 text-xs leading-6 text-amber-700 dark:text-amber-300">

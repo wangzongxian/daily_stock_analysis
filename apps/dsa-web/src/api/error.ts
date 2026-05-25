@@ -356,7 +356,7 @@ export function parseApiError(error: unknown): ParsedApiError {
   if (errorCode === 'alphasift_install_spec_missing') {
     return createParsedApiError({
       title: 'AlphaSift 安装来源未配置',
-      message: '请先在设置页把 ALPHASIFT_INSTALL_SPEC 配置为 git+https://github.com/ZhuLinsen/alphasift.git，再开启选股。',
+      message: '请先在设置页把 ALPHASIFT_INSTALL_SPEC 配置为受信任的固定 GitHub commit，再开启选股。',
       rawMessage,
       status,
       category: 'http_error',

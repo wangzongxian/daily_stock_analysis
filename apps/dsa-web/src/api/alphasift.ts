@@ -54,7 +54,6 @@ export const alphasiftApi = {
   },
 
   async enable(): Promise<void> {
-    await this.install();
     const config = await systemConfigApi.getConfig(false);
     await systemConfigApi.update({
       configVersion: config.configVersion,
@@ -63,5 +62,6 @@ export const alphasiftApi = {
       items: [{ key: 'ALPHASIFT_ENABLED', value: 'true' }],
     });
     notifyAlphaSiftConfigChanged();
+    await this.install();
   },
 };

@@ -18,7 +18,10 @@ except ModuleNotFoundError:
 from api.v1.endpoints import alphasift as alphasift_endpoint
 from src.config import Config
 
-DEFAULT_ALPHASIFT_TEST_SPEC = "git+https://github.com/ZhuLinsen/alphasift.git"
+DEFAULT_ALPHASIFT_TEST_SPEC = (
+    "git+https://github.com/ZhuLinsen/alphasift.git"
+    "@2c76b2b6074ae3bae01d52e5e830a4af3e3246b2"
+)
 
 
 def _alphasift_unavailable() -> HTTPException:

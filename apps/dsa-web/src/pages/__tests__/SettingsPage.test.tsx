@@ -7,6 +7,9 @@ import SettingsPage from '../SettingsPage';
 const {
   exportEnv,
   importEnv,
+  updateSystemConfig,
+  alphasiftInstall,
+  notifyAlphaSiftConfigChanged,
   desktopCheckForUpdates,
   desktopGetUpdateState,
   desktopInstallDownloadedUpdate,
@@ -28,6 +31,9 @@ const {
 } = vi.hoisted(() => ({
   exportEnv: vi.fn(),
   importEnv: vi.fn(),
+  updateSystemConfig: vi.fn(),
+  alphasiftInstall: vi.fn(),
+  notifyAlphaSiftConfigChanged: vi.fn(),
   desktopCheckForUpdates: vi.fn(),
   desktopGetUpdateState: vi.fn(),
   desktopInstallDownloadedUpdate: vi.fn(),
@@ -65,7 +71,15 @@ vi.mock('../../api/systemConfig', () => ({
   systemConfigApi: {
     exportEnv: (...args: unknown[]) => exportEnv(...args),
     importEnv: (...args: unknown[]) => importEnv(...args),
+    update: (...args: unknown[]) => updateSystemConfig(...args),
   },
+}));
+
+vi.mock('../../api/alphasift', () => ({
+  alphasiftApi: {
+    install: (...args: unknown[]) => alphasiftInstall(...args),
+  },
+  notifyAlphaSiftConfigChanged: (...args: unknown[]) => notifyAlphaSiftConfigChanged(...args),
 }));
 
 vi.mock('../../utils/constants', async () => {
@@ -400,6 +414,17 @@ describe('SettingsPage', () => {
       reloadTriggered: true,
       updatedKeys: ['STOCK_LIST'],
       warnings: [],
+    });
+    updateSystemConfig.mockResolvedValue({
+      success: true,
+      configVersion: 'v2',
+      updatedKeys: ['ALPHASIFT_ENABLED'],
+      reloadTriggered: true,
+    });
+    alphasiftInstall.mockResolvedValue({
+      installed: true,
+      alreadyInstalled: true,
+      installSpec: 'git+https://github.com/ZhuLinsen/alphasift.git@2c76b2b6074ae3bae01d52e5e830a4af3e3246b2',
     });
     desktopGetUpdateState.mockResolvedValue({
       status: 'idle',
@@ -747,6 +772,70 @@ describe('SettingsPage', () => {
 
     expect(refreshAfterExternalSave).toHaveBeenCalledWith(['LLM_CHANNELS']);
     expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('persists AlphaSift enabled before running the install check', async () => {
+    const configState = buildSystemConfigState();
+    useSystemConfigMock.mockReturnValue(buildSystemConfigState({
+      itemsByCategory: {
+        ...configState.itemsByCategory,
+        data_source: [
+          {
+            key: 'ALPHASIFT_ENABLED',
+            value: 'false',
+            rawValueExists: true,
+            isMasked: false,
+            schema: {
+              key: 'ALPHASIFT_ENABLED',
+              category: 'data_source',
+              dataType: 'boolean',
+              uiControl: 'switch',
+              isSensitive: false,
+              isRequired: false,
+              isEditable: true,
+              options: [],
+              validation: {},
+              displayOrder: 16,
+            },
+          },
+          {
+            key: 'ALPHASIFT_INSTALL_SPEC',
+            value: 'git+https://github.com/ZhuLinsen/alphasift.git@2c76b2b6074ae3bae01d52e5e830a4af3e3246b2',
+            rawValueExists: true,
+            isMasked: false,
+            schema: {
+              key: 'ALPHASIFT_INSTALL_SPEC',
+              category: 'data_source',
+              dataType: 'string',
+              uiControl: 'text',
+              isSensitive: false,
+              isRequired: false,
+              isEditable: true,
+              options: [],
+              validation: {},
+              displayOrder: 17,
+            },
+          },
+        ],
+      },
+    }));
+
+    render(<SettingsPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: '开启选股' }));
+
+    await waitFor(() => expect(updateSystemConfig).toHaveBeenCalledWith({
+      configVersion: 'v1',
+      maskToken: '******',
+      reloadNow: true,
+      items: [{ key: 'ALPHASIFT_ENABLED', value: 'true' }],
+    }));
+    await waitFor(() => expect(alphasiftInstall).toHaveBeenCalledTimes(1));
+    expect(updateSystemConfig.mock.invocationCallOrder[0]).toBeLessThan(
+      alphasiftInstall.mock.invocationCallOrder[0]
+    );
+    expect(notifyAlphaSiftConfigChanged).toHaveBeenCalledTimes(1);
+    expect(refreshAfterExternalSave).toHaveBeenCalledWith(['ALPHASIFT_ENABLED']);
   });
 
   it('renders notification test panel before notification fields', () => {
