@@ -246,6 +246,7 @@ const SettingsPage: React.FC = () => {
     save,
     resetDraft,
     setDraftValue,
+    getChangedItems,
     refreshAfterExternalSave,
     configVersion,
     maskToken,
@@ -505,6 +506,14 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleSaveConfig = async () => {
+    const changedKeys = new Set(getChangedItems().map((item) => item.key));
+    const result = await save();
+    if (result.success && changedKeys.has('ALPHASIFT_ENABLED')) {
+      notifyAlphaSiftConfigChanged();
+    }
+  };
+
   const openDesktopReleasePage = async () => {
     if (!desktopRuntimeApi?.openReleasePage) {
       return;
@@ -598,7 +607,7 @@ const SettingsPage: React.FC = () => {
             <Button
               type="button"
               variant="settings-primary"
-              onClick={() => void save()}
+              onClick={() => void handleSaveConfig()}
               disabled={!hasDirty || isSaving || isLoading}
               isLoading={isSaving}
               loadingText="保存中..."

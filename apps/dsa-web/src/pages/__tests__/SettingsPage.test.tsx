@@ -22,6 +22,7 @@ const {
   resetDraft,
   setDraftValue,
   applyPartialUpdate,
+  getChangedItems,
   refreshAfterExternalSave,
   refreshStatus,
   settingsPanelErrorBoundary,
@@ -46,6 +47,7 @@ const {
   resetDraft: vi.fn(),
   setDraftValue: vi.fn(),
   applyPartialUpdate: vi.fn(),
+  getChangedItems: vi.fn(),
   refreshAfterExternalSave: vi.fn(),
   refreshStatus: vi.fn(),
   settingsPanelErrorBoundary: vi.fn(),
@@ -252,6 +254,7 @@ type ConfigState = {
   resetDraft: typeof resetDraft;
   setDraftValue: typeof setDraftValue;
   applyPartialUpdate: typeof applyPartialUpdate;
+  getChangedItems: () => Array<{ key: string; value: string }>;
   refreshAfterExternalSave: typeof refreshAfterExternalSave;
   configVersion: string;
   maskToken: string;
@@ -382,6 +385,7 @@ function buildSystemConfigState(overrides: ConfigOverride = {}) {
     resetDraft,
     setDraftValue,
     applyPartialUpdate,
+    getChangedItems: () => [],
     refreshAfterExternalSave,
     configVersion: 'v1',
     maskToken: '******',
@@ -772,6 +776,40 @@ describe('SettingsPage', () => {
 
     expect(refreshAfterExternalSave).toHaveBeenCalledWith(['LLM_CHANNELS']);
     expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('notifies alphasift status update after generic save when ALPHASIFT_ENABLED changes', async () => {
+    save.mockResolvedValue({ success: true });
+    getChangedItems.mockReturnValue([{ key: 'ALPHASIFT_ENABLED', value: 'false' }]);
+
+    useSystemConfigMock.mockReturnValue(buildSystemConfigState({
+      hasDirty: true,
+      dirtyCount: 1,
+      getChangedItems: () => [{ key: 'ALPHASIFT_ENABLED', value: 'false' }],
+    }));
+
+    render(<SettingsPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /保存配置/ }));
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(notifyAlphaSiftConfigChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not notify alphasift status when generic save updates other fields', async () => {
+    save.mockResolvedValue({ success: true });
+    useSystemConfigMock.mockReturnValue(buildSystemConfigState({
+      hasDirty: true,
+      dirtyCount: 1,
+      getChangedItems: () => [{ key: 'LLM_CHANNELS', value: 'primary,backup' }],
+    }));
+
+    render(<SettingsPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /保存配置/ }));
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(notifyAlphaSiftConfigChanged).not.toHaveBeenCalled();
   });
 
   it('persists AlphaSift enabled before running the install check', async () => {
