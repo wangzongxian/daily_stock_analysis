@@ -790,6 +790,20 @@ P5 在不修改 `PACK_VERSION = "1.0"`、不新增数据源和不改变报告 JS
 
 历史详情、同步分析响应和 completed 任务状态继续只通过 `report.details.analysis_context_pack_overview` 暴露低敏字段；P5 只在该 overview 下新增 `data_quality`，包含 score、level、block_scores 和 limitations，不重复公开 `warnings`。Web 报告页仍默认折叠展示数据块摘要，折叠头部新增质量分/等级，展开后展示限制说明和 `fetch_failed` 状态；`details.context_snapshot` 继续剥离顶层 `analysis_context_pack_overview`。
 
+#### AnalysisContextPack 文档收口、迁移与回滚（Issue #1389 P6）
+
+P6 是收口与文档/验收阶段，不改动运行时契约，也不新增配置项。
+
+- `pack`、`overview`、Prompt 摘要、历史快照上下文通道的可见字段规则都收口到本专题文档，不新增 API 字段或运行参数。
+- 本阶段进行敏感信息核验的发布前门禁：
+  - `AnalysisContextPack.to_safe_dict()` 与 `redact_sensitive_mapping()` 不应透出 `api_key`、`token`、`cookie`、`webhook_url`、`secret`、`authorization`、`password`、`sendkey`、`license_key`。
+  - `format_analysis_context_pack_prompt_section()` 不应输出 `items.value`、完整 `news.content`、raw `trend_result`、raw `fundamentals`、`webhook`、`token`。
+  - `render_analysis_context_pack_overview()` 与 `sanitize_context_snapshot_for_api()` 不应把完整 pack 及其 `items`、`value`、敏感键值作为公共返回。
+  - 历史快照与同步分析返回仍通过 `report.details.analysis_context_pack_overview` 与剥离后的 `details.context_snapshot` 兜底兼容。
+- 回滚方式：问题仅在文档收口层面时，回退 P6 文档提交即可；若涉及运行时行为，按发布策略回滚到对应版本，自动保留历史兼容。
+- `.env.example`、配置注册、Web 设置项不新增/不变更；仅当后续 Phase 引入新开关才触发配置迁移说明更新。
+- 中文 `docs/full-guide.md` 与英文 `docs/full-guide_EN.md` 均补齐 P6 可见性、迁移和回滚说明，不新增独立英文专题文档页。
+
 #### 使用 Crontab
 
 如果不想使用常驻进程，也可以使用系统的 Cron：

@@ -667,6 +667,20 @@ P5 adds lightweight data-quality scoring and model-readable data limitations to 
 
 History detail, sync analysis responses, and completed task status responses still expose only `report.details.analysis_context_pack_overview`; P5 only adds a nested `data_quality` object with score, level, block_scores, and limitations, and does not duplicate `warnings`. The Web report page remains collapsed by default, adds quality score/level to the header, and shows limitations plus `fetch_failed` status after expansion; API `details.context_snapshot` continues to strip the top-level `analysis_context_pack_overview`.
 
+### AnalysisContextPack Documentation Closure, Migration & Rollback (Issue #1389 P6)
+
+P6 is a doc-and-acceptance closure phase and does not change runtime contracts or introduce new configuration keys.
+
+- The runtime visibility rules for `pack` / `overview` / prompt summary / history-context channels are documented without changing any API payload shape.
+- Pre-release checks at this stage include secret leakage gates for:
+  - `AnalysisContextPack.to_safe_dict()` and `redact_sensitive_mapping()`: no raw `api_key`, `token`, `cookie`, `webhook_url`, `secret`, `authorization`, `password`, `sendkey`, or `license_key`.
+  - `format_analysis_context_pack_prompt_section()`: no `items.value`, full `news.content`, raw `trend_result`, raw `fundamentals`, webhook, or token strings.
+  - `render_analysis_context_pack_overview()` and `sanitize_context_snapshot_for_api()`: no full pack payload, no `items`, no `value`, and no sensitive keys in public response.
+  - API/history responses keep compatibility via `report.details.analysis_context_pack_overview` plus context-snapshot sanitization.
+- Rollback mode: doc-only issues can be recovered by reverting P6 docs; runtime behavior changes still roll back by release version revert.
+- This phase does not modify `.env.example`, config registry, or Web setting keys; config migration is only introduced when later phases add new behavior toggles.
+- `docs/full-guide.md` and `docs/full-guide_EN.md` are both aligned for P6, so no separate one-off English strategy page is required.
+
 ---
 
 ## Notification Channel Configuration

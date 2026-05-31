@@ -31,6 +31,7 @@ def test_analysis_context_pack_doc_has_required_sections() -> None:
         "## P3 Runtime Consumption",
         "## P4 历史记录、任务状态与 Web 可见性",
         "## P5 数据质量评分与 Prompt 数据限制",
+        "## P6 文档、迁移与回滚",
         "## 字段质量状态",
         "## 现有状态映射",
         "## 七路径盘点",
@@ -121,6 +122,14 @@ def test_analysis_context_pack_doc_records_non_goals_and_safety_boundaries() -> 
         "邮箱密码",
     ):
         assert token in doc
+    p6_section = _section(doc, "P6 文档、迁移与回滚")
+    for token in (
+        "本次收口未新增配置项",
+        "P6 只完成文档收口与核验路径",
+        "回滚方式",
+        "英文说明已同步更新",
+    ):
+        assert token in p6_section
 
 
 def test_analysis_context_pack_doc_defines_p1_schema_contract() -> None:
@@ -339,6 +348,41 @@ def test_analysis_context_pack_doc_defines_p5_data_quality_contract() -> None:
         "不改变 LLM 输出 JSON schema",
     ):
         assert token in section
+
+
+def test_analysis_context_pack_doc_records_p6_migration_boundary_and_api_sensitivity_checks() -> None:
+    doc = _read_doc()
+    guide = (PROJECT_ROOT / "docs" / "full-guide.md").read_text(encoding="utf-8")
+    guide_en = (PROJECT_ROOT / "docs" / "full-guide_EN.md").read_text(encoding="utf-8")
+
+    section = _section(doc, "P6 文档、迁移与回滚")
+    for token in (
+        "P6 只完成文档收口与核验路径",
+        "敏感信息核验",
+        "pack.to_safe_dict()",
+        "回滚方式",
+        "未新增配置项",
+    ):
+        assert token in section
+
+    for token in (
+        "P6 是收口与文档/验收阶段",
+        "历史快照与同步分析返回仍通过",
+        "回滚方式：问题仅在文档收口层面时",
+        "配置注册、Web 设置项不新增/不变更",
+        "中文 `docs/full-guide.md` 与英文 `docs/full-guide_EN.md` 均补齐",
+    ):
+        assert token in guide
+
+    for token in (
+        "P6 is a doc-and-acceptance closure phase",
+        "Pre-release checks at this stage include",
+        "secret leakage gates",
+        "Rollback mode",
+        "does not modify `.env.example`",
+        "are both aligned for P6",
+    ):
+        assert token in guide_en
 
 
 def test_analysis_context_pack_doc_maps_existing_status_terms() -> None:
