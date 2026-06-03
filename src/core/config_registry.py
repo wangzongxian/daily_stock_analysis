@@ -144,6 +144,18 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
                 "label": "完整指南：AI 模型配置",
                 "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#ai-模型配置",
             },
+            {
+                "label": "LiteLLM Providers（官方）",
+                "href": "https://docs.litellm.ai/docs/providers",
+            },
+            {
+                "label": "LiteLLM OpenAI-compatible（官方）",
+                "href": "https://docs.litellm.ai/docs/providers/openai_compatible",
+            },
+            {
+                "label": "LiteLLM model_list（官方）",
+                "href": "https://docs.litellm.ai/docs/proxy/configs#the-model_list-key",
+            },
         ],
         "warning_codes": ["provider_prefix_required"],
     },
@@ -204,6 +216,14 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
                 "label": "完整指南：AI 模型配置",
                 "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#ai-模型配置",
             },
+            {
+                "label": "LiteLLM Providers（官方）",
+                "href": "https://docs.litellm.ai/docs/providers",
+            },
+            {
+                "label": "LiteLLM config（官方）",
+                "href": "https://docs.litellm.ai/docs/proxy/configs",
+            },
         ],
         "warning_codes": ["fallback_models_must_be_available"],
     },
@@ -231,6 +251,10 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             {
                 "label": "LLM 配置指南：YAML 模式",
                 "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md#方式三litellm-原生-yaml-配置适合专家或复杂路由",
+            },
+            {
+                "label": "LiteLLM proxy config（官方）",
+                "href": "https://docs.litellm.ai/docs/proxy/configs",
             },
         ],
         "warning_codes": ["yaml_config_overrides_channel_editor"],
@@ -263,6 +287,10 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             {
                 "label": "LLM 服务商配置速查",
                 "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
+            },
+            {
+                "label": "LiteLLM OpenAI-compatible（官方）",
+                "href": "https://docs.litellm.ai/docs/providers/openai_compatible",
             },
         ],
         "warning_codes": ["channels_override_legacy_keys"],
@@ -482,7 +510,7 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
     },
     "ALPHASIFT_ENABLED": {
         "title": "AlphaSift Screening",
-        "description": "Enable the built-in AlphaSift stock screening tab. Disabled by default.",
+        "description": "Enable the built-in AlphaSift stock screening tab. Disabled by default. This flag only affects the AlphaSift screening path and does not migrate `.env` model/provider values.",
         "category": "data_source",
         "data_type": "boolean",
         "ui_control": "switch",

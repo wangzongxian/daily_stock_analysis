@@ -621,6 +621,8 @@ def _alphasift_runtime_env(config: Config, *, max_results: Optional[int] = None)
 
 
 def _build_alphasift_runtime_env(config: Config, *, max_results: Optional[int] = None) -> Dict[str, str]:
+    # Bridge runtime only: only inject resolved DSA values for this request/process scope.
+    # User .env/config is never rewritten here; unset channels/models are not silently migrated.
     env: Dict[str, str] = {}
 
     def put(key: str, value: Any) -> None:
