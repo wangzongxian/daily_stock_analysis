@@ -310,6 +310,24 @@ class MarketReviewLocalizationTestCase(unittest.TestCase):
         snapshots = persist_history.call_args.kwargs["market_light_snapshots"]
         self.assertEqual(set(snapshots), {"cn"})
 
+    def test_render_market_review_payload_markdown_does_not_repeat_title(self) -> None:
+        markdown = market_review_module._render_market_review_payload_markdown(
+            {
+                "title": "2026-06-03 大盘复盘",
+                "sections": [
+                    {
+                        "key": "daily_review",
+                        "title": "2026-06-03 大盘复盘",
+                        "markdown": "> 今日指数强弱分化。\n\n### 一、盘面总览\n正文",
+                    }
+                ],
+            },
+            wrapper_title="🎯 大盘复盘",
+        )
+
+        self.assertEqual(markdown.count("2026-06-03 大盘复盘"), 1)
+        self.assertTrue(markdown.startswith("🎯 大盘复盘\n\n## 2026-06-03 大盘复盘"))
+
     def test_persist_market_review_history_saves_markdown_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             old_db_path = os.environ.get("DATABASE_PATH")

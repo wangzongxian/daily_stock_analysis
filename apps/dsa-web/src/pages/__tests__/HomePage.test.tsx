@@ -464,7 +464,7 @@ describe('HomePage', () => {
     expect(dashboardScroll).toContainElement(marketReviewReport);
     expect(marketReviewReport.className).not.toContain('max-h-64');
     expect(marketReviewReport.className).not.toContain('overflow-y-auto');
-    expect(screen.getByRole('heading', { name: 'Structured Market Data' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '结构化大盘数据' })).toBeInTheDocument();
     expect(screen.getByText('3200')).toBeInTheDocument();
     expect(screen.getByText('3150.2')).toBeInTheDocument();
     expect(marketReviewReport.querySelector('h2, h3')?.textContent).not.toBe('A股市场复盘');
@@ -472,7 +472,7 @@ describe('HomePage', () => {
     expect(screen.getByRole('heading', { name: '风险提示' })).toBeInTheDocument();
     expect(screen.getAllByRole('table').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('# A股市场复盘')).not.toBeInTheDocument();
-    expect(await screen.findByText('开始分析')).toBeInTheDocument();
+    expect(screen.queryByText('开始分析')).not.toBeInTheDocument();
   });
 
   it('shows first-run setup gaps and links to settings', async () => {

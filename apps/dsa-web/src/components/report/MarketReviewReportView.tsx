@@ -153,8 +153,10 @@ const getPayloadSections = (payload?: MarketReviewPayload | null): MarketReviewS
     });
   }
 
+  const payloadTitle = normalizeHeading(payload.title || '');
   return (payload.sections || [])
     .filter((section: MarketReviewPayloadSection) => section.markdown?.trim())
+    .filter((section: MarketReviewPayloadSection) => normalizeHeading(section.title || '') !== payloadTitle)
     .map((section, index) => ({
       id: `${section.key || index}-${normalizeHeading(section.title).replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-') || 'section'}`,
       title: section.title || 'Review',

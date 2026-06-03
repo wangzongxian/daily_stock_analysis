@@ -1141,9 +1141,26 @@ Sector text.
         assert "| 上证指数 | 3300.00 | 🟢 +0.36% | 3288.00 | 3312.00 | 3276.00 | 1.10% | 1450 |" in result
         assert "#### 领涨板块 Top 5" in result
         assert "| 1 | AI算力 | +3.25% |" in result
-        assert "#### 近三日市场线索" in result
-        assert "AI算力板块走强" in result
+        assert "#### 近三日市场线索" not in result
+        assert "AI算力板块走强" not in result
+        assert "新闻。" in result
         assert "算力产业链延续活跃" not in result
+
+    def test_market_review_payload_sections_skip_top_report_title(self):
+        from src.market_analyzer import MarketAnalyzer
+
+        ma = MarketAnalyzer.__new__(MarketAnalyzer)
+        sections = ma._split_report_sections("""## 2026-06-03 大盘复盘
+
+> 今日指数分化。
+
+### 一、盘面总览
+正文
+""")
+
+        assert sections[0]["key"] == "overview"
+        assert "今日指数分化" in sections[0]["markdown"]
+        assert all(section["title"] != "2026-06-03 大盘复盘" for section in sections)
 
     def test_news_block_renders_title_source_and_link_only(self):
         from src.market_analyzer import MarketAnalyzer

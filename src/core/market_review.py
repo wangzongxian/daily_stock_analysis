@@ -311,6 +311,7 @@ def _render_single_market_review_payload(payload: Dict[str, Any]) -> str:
         return markdown if isinstance(markdown, str) else ""
 
     title = payload.get("title")
+    normalized_title = _normalize_market_review_heading(title)
     lines = []
     if isinstance(title, str) and title.strip():
         lines.extend([f"## {title.strip()}", ""])
@@ -321,10 +322,21 @@ def _render_single_market_review_payload(payload: Dict[str, Any]) -> str:
         markdown = str(section.get("markdown") or "").strip()
         if not markdown:
             continue
-        if section_title and section.get("key") != "overview":
+        should_render_section_title = (
+            section_title
+            and section.get("key") != "overview"
+            and _normalize_market_review_heading(section_title) != normalized_title
+        )
+        if should_render_section_title:
             lines.extend([f"### {section_title}", ""])
         lines.extend([markdown, ""])
     return "\n".join(lines).strip()
+
+
+def _normalize_market_review_heading(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.lstrip("#").strip().lower().split())
 
 
 def _persist_market_review_history(

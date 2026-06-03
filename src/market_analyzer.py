@@ -140,12 +140,9 @@ class MarketAnalyzer:
         self.strategy = get_market_strategy_blueprint(self.region)
 
     def _get_review_language(self) -> str:
-        configured = normalize_report_language(
+        return normalize_report_language(
             getattr(getattr(self, "config", None), "report_language", "zh")
         )
-        if self.region == "us":
-            return "en"
-        return configured
 
     def _get_template_review_language(self) -> str:
         return normalize_report_language(
@@ -551,11 +548,20 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
             return [{"key": "full_review", "title": "Review", "markdown": text}]
 
         sections: List[Dict[str, str]] = []
-        intro = text[: matches[0].start()].strip()
+        first_match = matches[0]
+        starts_with_report_title = first_match.start() == 0 and first_match.group(1) == "##"
+        content_start_index = 1 if starts_with_report_title else 0
+        intro_start = first_match.end() if starts_with_report_title else 0
+        intro_end = (
+            matches[1].start()
+            if starts_with_report_title and len(matches) > 1
+            else (len(text) if starts_with_report_title else matches[0].start())
+        )
+        intro = text[intro_start:intro_end].strip()
         if intro:
             sections.append({"key": "overview", "title": "Overview", "markdown": intro})
 
-        for index, match in enumerate(matches):
+        for index, match in enumerate(matches[content_start_index:], start=content_start_index):
             start = match.end()
             end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
             title = match.group(2).strip()
@@ -591,7 +597,6 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
         stats_block = self._build_stats_block(overview)
         indices_block = self._build_indices_block(overview)
         sector_block = self._build_sector_block(overview)
-        news_block = self._build_news_block(news or [])
         patterns = (
             _ENGLISH_SECTION_PATTERNS
             if self._get_review_language() == "en"
@@ -617,13 +622,6 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
                 review,
                 patterns["sector_highlights"],
                 sector_block,
-            )
-
-        if news_block and "news_catalysts" in patterns:
-            review = self._insert_after_section(
-                review,
-                patterns["news_catalysts"],
-                news_block,
             )
 
         return review

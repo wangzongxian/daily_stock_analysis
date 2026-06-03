@@ -787,11 +787,11 @@ const HomePage: React.FC = () => {
                 onDismiss={clearError}
               />
             ) : null}
-            {isLoadingReport ? (
+            {!marketReviewReport && isLoadingReport ? (
               <div className="flex h-full flex-col items-center justify-center">
                 <DashboardStateBlock title="加载报告中..." loading />
               </div>
-            ) : selectedReport ? (
+            ) : !marketReviewReport && selectedReport ? (
               <div className={isHistoryTrendOpen ? 'max-w-6xl space-y-4 pb-8' : 'max-w-4xl space-y-4 pb-8'}>
                 {!isMarketReviewHistoryReport ? (
                 <div className="flex flex-wrap items-center justify-end gap-2">
@@ -876,7 +876,7 @@ const HomePage: React.FC = () => {
                   />
                 )}
               </div>
-            ) : (
+            ) : !marketReviewReport ? (
               <div className="flex h-full items-center justify-center">
                 <EmptyState
                   title="开始分析"
@@ -889,7 +889,7 @@ const HomePage: React.FC = () => {
                   )}
                 />
               </div>
-            )}
+            ) : null}
           </section>
         </div>
       </div>
