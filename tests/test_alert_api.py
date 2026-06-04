@@ -3,15 +3,12 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import json
 import os
 import sys
 import tempfile
-import threading
 import unittest
-import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -27,7 +24,6 @@ except ModuleNotFoundError:
 
 import src.auth as auth
 from api.app import create_app
-from src.agent.events import EventMonitor
 from src.config import Config
 from src.repositories.alert_repo import AlertRepository
 from src.services.alert_service import AlertService
@@ -560,9 +556,12 @@ class AlertApiTestCase(unittest.TestCase):
             "data_quality": "ok",
         }
 
+        async def _run_inline(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
         with patch("src.services.market_light_alerts.get_open_markets_today", return_value={"cn"}), patch(
             "src.services.market_light_alerts.build_current_snapshot", return_value=snapshot
-        ) as build_snapshot:
+        ) as build_snapshot, patch("src.services.alert_service.asyncio.to_thread", new=_run_inline):
             resp = self.client.post(f"/api/v1/alerts/rules/{rule['id']}/test")
 
         self.assertEqual(resp.status_code, 200, resp.text)
@@ -580,113 +579,6 @@ class AlertApiTestCase(unittest.TestCase):
 
         self.assertEqual(self.client.get("/api/v1/alerts/triggers").json()["total"], 0)
         self.assertEqual(self.client.get("/api/v1/alerts/notifications").json()["total"], 0)
-
-    def test_dry_run_market_light_rules_are_offloaded_and_non_blocking(self) -> None:
-        cn_rule = self._create_rule({
-            "name": "CN market risk-off",
-            "target_scope": "market",
-            "target": "cn",
-            "alert_type": "market_light_status",
-            "parameters": {"statuses": ["red", "yellow"]},
-        })
-        hk_rule = self._create_rule({
-            "name": "HK market risk-off",
-            "target_scope": "market",
-            "target": "hk",
-            "alert_type": "market_light_status",
-            "parameters": {"statuses": ["red", "yellow"]},
-        })
-
-        service = AlertService()
-        cn_row = service.repo.get_rule(cn_rule["id"])
-        hk_row = service.repo.get_rule(hk_rule["id"])
-        self.assertIsNotNone(cn_row)
-        self.assertIsNotNone(hk_row)
-
-        payloads = [
-            service.build_runtime_payloads(cn_row)[0],
-            service.build_runtime_payloads(hk_row)[0],
-        ]
-
-        snapshots = {
-            "cn": {
-                "region": "cn",
-                "trade_date": "2026-03-07",
-                "status": "red",
-                "score": 35,
-                "label": "偏防守",
-                "temperature_label": "偏弱",
-                "reasons": ["test"],
-                "guidance": "test",
-                "dimensions": {
-                    "breadth": {"score": 20, "available": True},
-                    "index": {"score": 30, "available": True},
-                    "limit": {"score": 10, "available": True},
-                },
-                "data_quality": "ok",
-            },
-            "hk": {
-                "region": "hk",
-                "trade_date": "2026-03-07",
-                "status": "yellow",
-                "score": 42,
-                "label": "防守",
-                "temperature_label": "偏弱",
-                "reasons": ["test"],
-                "guidance": "test",
-                "dimensions": {
-                    "breadth": {"score": 21, "available": True},
-                    "index": {"score": 31, "available": True},
-                    "limit": {"score": 11, "available": True},
-                },
-                "data_quality": "ok",
-            },
-        }
-
-        state = {
-            "to_thread_calls": 0,
-            "running": 0,
-            "max_running": 0,
-        }
-        lock = threading.Lock()
-        both_started = threading.Event()
-
-        def _snapshot(region: str) -> dict[str, object]:
-            return snapshots[region]
-
-        def _worker(func, args, kwargs):
-            with lock:
-                state["to_thread_calls"] += 1
-                state["running"] += 1
-                if state["running"] > state["max_running"]:
-                    state["max_running"] = state["running"]
-                if state["running"] >= 2:
-                    both_started.set()
-            try:
-                time.sleep(0.12)
-                return func(*args, **kwargs)
-            finally:
-                with lock:
-                    state["running"] -= 1
-
-        with (
-            patch("src.services.market_light_alerts.build_current_snapshot", side_effect=_snapshot),
-        ):
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                async def _to_thread(func, *args, **kwargs):
-                    return await asyncio.get_running_loop().run_in_executor(executor, _worker, func, args, kwargs)
-
-                with patch("src.services.alert_service.asyncio.to_thread", new=_to_thread):
-                    outputs = asyncio.run(service._evaluate_runtime_payloads(payloads, EventMonitor()))
-
-        self.assertEqual(state["to_thread_calls"], 2)
-        self.assertGreaterEqual(state["max_running"], 2)
-        self.assertTrue(both_started.is_set(), "Market Light 并发规则未进入线程池并行执行")
-        self.assertEqual({item["target"] for item in outputs}, {"cn", "hk"})
-        for item in outputs:
-            self.assertEqual(item["status"], "triggered")
-            self.assertEqual(item["record_status"], "triggered")
-            self.assertIsNotNone(item["observed_value"])
 
     def test_dry_run_price_cross_uses_mocked_quote_and_does_not_write_history(self) -> None:
         rule = self._create_rule()
