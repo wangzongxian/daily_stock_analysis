@@ -333,7 +333,8 @@ class MainScheduleModeTestCase(unittest.TestCase):
         args = self._make_args(serve_only=True, host="127.0.0.1", port=8000)
         config = self._make_config(webui_enabled=False)
 
-        with patch("main.parse_arguments", return_value=args), \
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}, clear=False), \
+             patch("main.parse_arguments", return_value=args), \
              patch("main.get_config", return_value=config), \
              patch("main.prepare_webui_frontend_assets", return_value=True), \
              patch("main.start_api_server", side_effect=RuntimeError("port busy")), \
@@ -349,7 +350,8 @@ class MainScheduleModeTestCase(unittest.TestCase):
         args = self._make_args(webui_only=True, host="127.0.0.1", port=8000)
         config = self._make_config(webui_enabled=False)
 
-        with patch("main.parse_arguments", return_value=args), \
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}, clear=False), \
+             patch("main.parse_arguments", return_value=args), \
              patch("main.get_config", return_value=config), \
              patch("main.prepare_webui_frontend_assets", return_value=True), \
              patch("main.start_api_server", side_effect=RuntimeError("port busy")), \
@@ -367,7 +369,8 @@ class MainScheduleModeTestCase(unittest.TestCase):
         args = self._make_args(serve=True, host="127.0.0.1", port=8000)
         config = self._make_config(webui_enabled=False, run_immediately=True)
 
-        with patch("main.parse_arguments", return_value=args), \
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}, clear=False), \
+             patch("main.parse_arguments", return_value=args), \
              patch("main.get_config", return_value=config), \
              patch("main.prepare_webui_frontend_assets", return_value=True), \
              patch("main.start_api_server", side_effect=RuntimeError("port busy")), \
@@ -398,7 +401,8 @@ class MainScheduleModeTestCase(unittest.TestCase):
             scheduled_call["background_tasks"] = background_tasks or []
             task()
 
-        with patch("main.parse_arguments", return_value=args), \
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}, clear=False), \
+             patch("main.parse_arguments", return_value=args), \
              patch("main.get_config", return_value=config), \
              patch("main._reload_runtime_config", return_value=config), \
              patch("main._build_schedule_time_provider", return_value=lambda: "18:00"), \
