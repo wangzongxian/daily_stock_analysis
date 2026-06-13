@@ -4,11 +4,16 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 import pandas as pd
 import requests
+
+try:
+    import exchange_calendars as xcals
+except ImportError:  # pragma: no cover - dependency is present in supported installs
+    xcals = None
 
 from .base import BaseFetcher, DataFetchError, STANDARD_COLUMNS, normalize_stock_code, is_bse_code
 
@@ -142,7 +147,22 @@ def _is_capped_history_incomplete(
         requested_start = datetime.strptime(start_date, "%Y-%m-%d")
     except ValueError:
         return False
-    return first > requested_start
+    return first > _first_trading_date_on_or_after(requested_start)
+
+
+def _first_trading_date_on_or_after(start_date: datetime) -> datetime:
+    if xcals is not None:
+        try:
+            cal = xcals.get_calendar("XSHG")
+            session = cal.date_to_session(start_date.date(), direction="next")
+            return datetime.combine(session.date(), datetime.min.time())
+        except Exception:
+            pass
+
+    current = start_date
+    while current.weekday() >= 5:
+        current += timedelta(days=1)
+    return current
 
 
 def _format_tencent_date(date_text: str) -> Optional[str]:
