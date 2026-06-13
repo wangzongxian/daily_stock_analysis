@@ -1055,6 +1055,36 @@ class SearchNewsFreshnessTestCase(unittest.TestCase):
 
         self.assertEqual([item.title for item in resp.results], ["腾讯控股 00700 发布回购公告"])
 
+    def test_adult_alphanumeric_contact_handle_is_filtered(self) -> None:
+        """Contact handles such as 微信：abc123 should count as adult-service spam signals."""
+        fresh = datetime.now().date().isoformat()
+        service, _ = self._create_service_with_mock_provider(
+            news_max_age_days=3,
+            news_strategy_profile="short",
+            response=_response(
+                [
+                    _result(
+                        "腾讯控股 00700 小姐上门 微信：abc123",
+                        fresh,
+                        snippet="联系获取详情。",
+                        url="https://spam.example.invalid/local/wechat-abc123",
+                        source="spam.example.invalid",
+                    ),
+                    _result(
+                        "腾讯控股 00700 发布回购公告",
+                        fresh,
+                        snippet="腾讯控股披露股份回购公告。",
+                        url="https://finance.example.invalid/news/00700-buyback",
+                        source="finance.example.invalid",
+                    ),
+                ]
+            ),
+        )
+
+        resp = service.search_stock_news("00700.HK", "腾讯控股", max_results=1)
+
+        self.assertEqual([item.title for item in resp.results], ["腾讯控股 00700 发布回购公告"])
+
     def test_content_moderation_pornography_phrase_does_not_trigger_adult_spam_filter(self) -> None:
         """Content-safety/regulatory news can mention 色情 without being adult-service spam."""
         fresh = datetime.now().date().isoformat()

@@ -2228,7 +2228,8 @@ class SearchService:
         "会所", "技师", "全套", "套餐", "vip",
     )
     _ADULT_SERVICE_SPAM_CONTACT_RE = re.compile(
-        r"(?:^|[^a-z0-9])(?:yue|vx|qq|wechat|weixin|微信号?|微[信讯])[-_:\s：]*\d{3,}(?:[^a-z0-9]|$)",
+        r"(?:^|[^a-z0-9])(?:yue|vx|wx|qq|wechat|weixin|微信号?|微[信讯])"
+        r"[-_:\s：]*[a-z0-9][a-z0-9_-]{2,}(?:[^a-z0-9]|$)",
         re.IGNORECASE,
     )
     _ADULT_SERVICE_SPAM_CONTACT_CONTEXT_TERMS = (
