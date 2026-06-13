@@ -658,6 +658,57 @@ class SearchNewsFreshnessTestCase(unittest.TestCase):
         )
         self.assertEqual(resp.results[0].relevance_category, "direct_company_news")
 
+    def test_finance_client_boilerplate_does_not_trigger_download_filter(self) -> None:
+        """Finance media boilerplate such as 客户端讯 should not look like an app page."""
+        fresh = datetime.now().date().isoformat()
+        service, _ = self._create_service_with_mock_provider(
+            news_max_age_days=3,
+            news_strategy_profile="short",
+            response=_response(
+                [
+                    _result(
+                        "贵州茅台 600519 发布回购公告",
+                        fresh,
+                        snippet="证券时报客户端讯，贵州茅台披露股份回购公告。",
+                        url="https://finance.example.invalid/news/600519-buyback",
+                        source="证券时报",
+                    )
+                ]
+            ),
+        )
+
+        resp = service.search_stock_news("600519", "贵州茅台", max_results=1)
+
+        self.assertEqual([item.title for item in resp.results], ["贵州茅台 600519 发布回购公告"])
+        self.assertEqual(resp.results[0].relevance_category, "direct_company_news")
+
+    def test_market_peripheral_phrase_does_not_trigger_adult_spam_filter(self) -> None:
+        """Finance usage of 外围市场 should not be treated as adult-service spam."""
+        fresh = datetime.now().date().isoformat()
+        service, _ = self._create_service_with_mock_provider(
+            news_max_age_days=3,
+            news_strategy_profile="short",
+            response=_response(
+                [
+                    _result(
+                        "腾讯控股 00700 受外围市场走弱拖累",
+                        fresh,
+                        snippet="外围市场走弱拖累港股科技股，腾讯控股成交活跃。",
+                        url="https://finance.example.invalid/markets/00700",
+                        source="finance.example.invalid",
+                    )
+                ]
+            ),
+        )
+
+        resp = service.search_stock_news("00700.HK", "腾讯控股", max_results=1)
+
+        self.assertEqual(
+            [item.title for item in resp.results],
+            ["腾讯控股 00700 受外围市场走弱拖累"],
+        )
+        self.assertEqual(resp.results[0].relevance_category, "direct_company_news")
+
     def test_spoofed_official_tokens_do_not_bypass_news_admission(self) -> None:
         """Official exemptions should require trusted parsed hosts or exact source labels."""
         fresh = datetime.now().date().isoformat()

@@ -2177,6 +2177,8 @@ class SearchService:
     )
     _LOW_QUALITY_DOWNLOAD_INTENT_TERMS = (
         "安装包", "安卓版", "苹果版", "官方版", "客户端下载", "应用下载",
+        "下载安装", "下载安装到手机", "下载链接", "免费下载", "旧版下载",
+        "极速版下载", "官方app下载",
     )
     _LOW_QUALITY_DOWNLOAD_CONTEXT_TERMS = (
         "下载", "安装", "安卓版", "苹果版", "官方版", "最新版",
@@ -2200,9 +2202,10 @@ class SearchService:
         re.IGNORECASE,
     )
     _ADULT_SERVICE_SPAM_STRONG_TERMS = (
-        "上门特殊服务", "同城约", "约炮", "援交", "楼凤", "包夜",
-        "大保健", "莞式", "推油", "全套服务", "成人服务", "色情",
-        "adult service", "escort service", "sex service", "call girl",
+        "上门特殊服务", "同城约", "约炮", "援交", "楼凤", "外围女",
+        "外围服务", "包夜", "大保健", "莞式", "推油", "全套服务",
+        "成人服务", "色情", "adult service", "escort service",
+        "sex service", "call girl",
     )
     _ADULT_SERVICE_SPAM_CONTEXT_TERMS = (
         "小姐", "上门", "预约", "同城", "按摩", "保健", "足浴", "桑拿",
@@ -2764,17 +2767,24 @@ class SearchService:
         has_file_size = bool(cls._LOW_QUALITY_FILE_SIZE_RE.search(content_text))
         has_rating = bool(cls._LOW_QUALITY_RATING_RE.search(content_text))
         has_url_signal = bool(cls._LOW_QUALITY_URL_RE.search(url_surface))
-        has_app_listing_context = has_app_context and (
-            has_download_term or has_download_context or has_url_signal
+        has_app_listing_context = (
+            has_app_context
+            and (has_download_term or has_download_context)
+            and (has_file_size or has_rating)
+        )
+        has_content_download_page = (
+            has_download_intent
+            and (has_download_term or has_download_context or has_app_context)
+        )
+        has_url_backed_download_page = (
+            has_url_signal
+            and (has_download_context or has_file_size or has_rating or has_download_intent)
         )
 
         return (
-            (has_download_term and has_download_intent and (has_app_context or has_download_context))
-            or (has_download_term or has_app_listing_context)
-            and (has_file_size or has_rating)
-        ) or (
-            has_url_signal
-            and (has_download_context or has_file_size or has_rating)
+            has_content_download_page
+            or has_app_listing_context
+            or has_url_backed_download_page
         )
 
     @classmethod
