@@ -73,6 +73,12 @@ Market Light / 告警：
 - JP/KR 大盘复盘 v1 可生成报告和结构化 market review payload，但不等价于完整 Market Light 风控信号。
 - 该轮边界收敛不改动 LLM Provider / Model / Base URL 的持久化语义，也不执行默认模型、运行时配置清理或回写；如需回滚，仅需恢复提交前 `.env` 与相关配置快照，并回退该功能提交。
 
+本轮配置兼容说明：
+
+- 影响的关键键值：`MARKET_REVIEW_REGION`、`MARKET_REVIEW_COLOR_SCHEME`（仅扩展大盘复盘输入与展示），不新增 provider/model/base_url 的新写入语义。
+- 兼容保护：配置更新仍是**原子 upsert**（`ConfigManager.apply_updates`），保存/导入只写入提交的键，未提交的 `LITELLM_MODEL`、`LITELLM_FALLBACK_MODELS`、`AGENT_LITELLM_MODEL`、`VISION_MODEL`、`OPENAI_BASE_URL` 等旧值保留不清空；运行时 provider 选择仍遵循既有优先级链路。
+- 回退策略：先恢复提交前 `.env` / 配置备份，再恢复 `MARKET_REVIEW_REGION` 为旧值并重启服务，或直接 revert 本 PR，按 `docs/full-guide.md` 的“文档与回退说明”执行。
+
 回滚方式：移除 Portfolio snapshot 的 `data_quality` / `limitations` 扩展，并恢复告警前端/后端对市场枚举的旧边界说明。
 
 ## 审核核验与回退说明（Issue #1815）

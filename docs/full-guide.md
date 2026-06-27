@@ -758,6 +758,8 @@ docker run -e SCHEDULE_ENABLED=true -e SCHEDULE_RUN_IMMEDIATELY=false ...
 
 > 兼容说明（Issue #1815）：`MARKET_REVIEW_REGION=cn|hk|us|jp|kr|both` 仅扩展大盘复盘输入集合；JP/KR 仅供复盘上下文消费，不会放开 Market Light 告警。
 > - `src/config.py`、`src/core/config_registry.py`、`src/services/system_config_service.py` 的改动仅是配置语义扩展，不改 `provider`/`model`/`base_url` 的运行时路由，也不触发 provider/model/base URL 迁移或清理逻辑。
+> - 本轮实际受控配置项：`MARKET_REVIEW_REGION`、`MARKET_REVIEW_COLOR_SCHEME`；`LITELLM_MODEL`、`AGENT_LITELLM_MODEL`、`LITELLM_FALLBACK_MODELS`、`VISION_MODEL`、`OPENAI_BASE_URL` 等旧值保持原子 upsert 语义，不会在更新其他字段时被静默清空或覆盖。
+> - 旧值回退策略：先恢复备份 `MARKET_REVIEW_REGION` 与配置文件即可回到旧边界，未提交的模型/路由键保留原值；必要时 `revert` PR 并按 `.env` 备份完成回退。
 > - 兼容检测项：`tests/test_market_light_service.py`（Market Light 市场枚举范围）、`tests/test_market_light_alerts.py`（JP/KR 告警拒绝链路）、`tests/test_portfolio_service.py`（JP/KR 快照 `data_quality` 限制）、`tests/test_system_config_service.py`（provider/model/base_url 配置兼容与回退）、`tests/test_config_env_compat.py`（配置源回退语义）。
 > - 官方依据：LiteLLM OpenAI-compatible <https://docs.litellm.ai/docs/providers/openai_compatible> 与 OpenAI Chat API <https://platform.openai.com/docs/api-reference/chat>。
 > - PR 可视证据替代：Market Light 下拉与告警范围变化已被 `apps/dsa-web/src/components/alerts/__tests__/AlertRuleForm.test.tsx` 的断言锁定（`日股（jp）`、`韩股（kr）` 在 `market` 选项中不可见）；无法提供截图时，可在 PR 描述引用该测试输出、截图路径与命令：
