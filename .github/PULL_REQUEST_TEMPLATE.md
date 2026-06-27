@@ -62,6 +62,7 @@ python -m pytest -m "not network"
   - backend-gate：`pass` / `fail`，附链接
   - docker-build：`pass` / `fail`，附链接
   - web-gate：`pass` / `fail`，附链接
+  - 若本 PR 修改 `.github/PULL_REQUEST_TEMPLATE.md` 等流程模板协作文件，请先说明变更必要性、影响边界，并明确回滚方式（默认 `revert this PR`）；否则请在下一版中拆为单独 chore PR。
 
 关键输出/结论 / Key output & conclusion:
 
@@ -110,6 +111,8 @@ python -m pytest -m "not network"
 - 若本 PR 修改第三方模型 / API 的兼容语义、请求参数、路由前缀或 provider fallback，请提供**官方来源链接或公告**，并说明这是长期约束、当前运行时约束还是临时兼容处理。  
   请在下方补充所影响外部 API/服务、回归范围与回退方式。  
   *(EN) If this PR changes third-party model/API compatibility, request parameters, routing prefixes, or provider fallback behavior, include an **official source link or announcement** and clarify whether the rule is permanent, runtime-specific, or a temporary compatibility workaround.)*
+- 若本 PR 修改 `.github/PULL_REQUEST_TEMPLATE.md` / PR 流程模板类文件，请在此明确：仅影响协作流程与模板维护，不改 runtime 行为；回退方式为 revert；并补充是否影响自动化提交流程。  
+  *(EN) If this PR changes `.github/PULL_REQUEST_TEMPLATE.md` or other PR workflow files, state that it only affects contribution governance templates (no runtime behavior), provide rollback by revert, and note any CI/checklist impact.)*
 - 若本 PR 依赖特定运行时 / 锁定依赖窗口（例如 LiteLLM 版本范围、OpenAI-compatible 路由、YAML alias 行为），请写明当前验证过的兼容范围与覆盖路径。  
   *(EN) If this PR depends on a specific runtime or pinned dependency window (for example a LiteLLM version range, OpenAI-compatible routing, or YAML alias behavior), state the compatibility window you verified and which code paths were covered.)*
 - 若本 PR 触及运行时配置保存、清理、迁移或回填逻辑，请明确说明旧配置是否会被自动改写、清空、迁移或保持不变，以及用户如何恢复原行为。  

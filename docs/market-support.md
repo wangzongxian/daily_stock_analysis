@@ -55,7 +55,7 @@
 - `kr`：通过 Yahoo Finance 获取 KOSPI `^KS11` 与 KOSDAQ `^KQ11`，输出韩股大盘复盘。可复核页面：
   - `^KS11`：<https://finance.yahoo.com/quote/%5EKS11/>
   - `^KQ11`：<https://finance.yahoo.com/quote/%5EKQ11/>
-- Web 设置页可选择 `jp` / `kr`；交易日检查会按 `XTKS / Asia/Tokyo` 与 `XKRX / Asia/Seoul` 过滤 `both` 中当日开市市场。
+- Web 设置页通过 `MARKET_REVIEW_REGION` 文本框输入逗号分隔子集（如 `cn,jp`、`cn,us,jp,kr`）；交易日检查会按 `XTKS / Asia/Tokyo` 与 `XKRX / Asia/Seoul` 过滤 `both` 中当日开市市场。
 - 复盘策略、新闻搜索词、Prompt 市场语义和中英文通知标题均按 JP/KR 独立 profile 处理。
 
 说明（兼容性与验收口径）：
