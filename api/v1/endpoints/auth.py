@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import ipaddress
 import logging
 import os
 
@@ -37,6 +36,7 @@ from src.core.config_manager import ConfigManager
 from src.webui_security import (
     current_webui_bound_host,
     is_insecure_public_api_allowed,
+    is_loopback_host,
     is_public_bind_host,
     public_auth_guard_message,
 )
@@ -189,28 +189,13 @@ def _get_auth_status_dict(request: Request | None = None) -> dict:
     }
 
 
-def _is_loopback_host(host: str | None) -> bool:
-    normalized = (host or "").strip()
-    if not normalized:
-        return False
-    if normalized.lower() in {"localhost", "[::1]", "::1"}:
-        return True
-
-    normalized = normalized.strip("[]")
-    normalized = normalized.split("%", 1)[0]
-    try:
-        return ipaddress.ip_address(normalized).is_loopback
-    except ValueError:
-        return False
-
-
 def _public_bind_requires_auth(request: Request) -> tuple[bool, str]:
     bound_host = current_webui_bound_host()
     if is_insecure_public_api_allowed():
         return False, bound_host
     if is_public_bind_host(bound_host):
         return True, bound_host
-    if not bound_host and not _is_loopback_host(request.client.host if request.client else None):
+    if not bound_host and not is_loopback_host(request.client.host if request.client else None):
         return True, bound_host
     return False, bound_host
 

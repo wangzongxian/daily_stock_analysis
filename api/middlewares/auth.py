@@ -6,7 +6,6 @@ Auth middleware: protect /api/v1/* when admin auth is enabled.
 from __future__ import annotations
 
 import logging
-import ipaddress
 from typing import Callable
 
 from fastapi import Request
@@ -17,6 +16,7 @@ from src.auth import COOKIE_NAME, is_auth_enabled, verify_session
 from src.webui_security import (
     current_webui_bound_host,
     is_insecure_public_api_allowed,
+    is_loopback_host,
     is_public_bind_host,
     public_auth_guard_message,
 )
@@ -41,23 +41,8 @@ def _path_exempt(path: str) -> bool:
     return normalized in EXEMPT_PATHS
 
 
-def _is_loopback_host(host: str | None) -> bool:
-    normalized = (host or "").strip()
-    if not normalized:
-        return False
-    if normalized.lower() in {"localhost", "[::1]", "::1"}:
-        return True
-
-    normalized = normalized.strip("[]")
-    normalized = normalized.split("%", 1)[0]
-    try:
-        return ipaddress.ip_address(normalized).is_loopback
-    except ValueError:
-        return False
-
-
 def _is_loopback_client(request: Request) -> bool:
-    return _is_loopback_host(request.client.host if request.client else None)
+    return is_loopback_host(request.client.host if request.client else None)
 
 
 def _get_effective_bound_host(request: Request) -> str:

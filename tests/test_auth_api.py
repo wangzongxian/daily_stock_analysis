@@ -343,6 +343,63 @@ class AuthApiTestCase(unittest.TestCase):
         self.assertIn(b"admin_auth_required", response.body)
         call_next.assert_not_awaited()
 
+    def test_public_bind_alias_rejects_api_when_auth_disabled_without_override(self) -> None:
+        scope = {
+            "type": "http",
+            "method": "POST",
+            "path": "/api/v1/analysis/analyze",
+            "headers": [],
+            "query_string": b"",
+            "scheme": "http",
+            "client": ("203.0.113.10", 1234),
+            "server": ("0.0.0.0", 80),
+            "root_path": "",
+        }
+
+        for host in ["0", "0:0:0:0:0:0:0:0"]:
+            request = Request(dict(scope))
+            middleware = AuthMiddleware(app=MagicMock())
+            call_next = AsyncMock(return_value=Response(status_code=200))
+
+            with self.subTest(host=host), patch.dict(
+                os.environ,
+                {"DSA_WEBUI_BOUND_HOST": host, "DSA_ALLOW_INSECURE_PUBLIC_API": ""},
+                clear=False,
+            ), patch("api.middlewares.auth.is_auth_enabled", return_value=False):
+                response = asyncio.run(middleware.dispatch(request, call_next))
+
+            self.assertEqual(response.status_code, 401)
+            self.assertIn(b"admin_auth_required", response.body)
+            call_next.assert_not_awaited()
+
+    def test_public_bind_alias_reaches_api_when_insecure_override_enabled(self) -> None:
+        scope = {
+            "type": "http",
+            "method": "POST",
+            "path": "/api/v1/analysis/analyze",
+            "headers": [],
+            "query_string": b"",
+            "scheme": "http",
+            "client": ("203.0.113.10", 1234),
+            "server": ("0.0.0.0", 80),
+            "root_path": "",
+        }
+        for host in ["0", "0:0:0:0:0:0:0:0"]:
+            request = Request(scope)
+            middleware = AuthMiddleware(app=MagicMock())
+            next_response = Response(status_code=200)
+            call_next = AsyncMock(return_value=next_response)
+
+            with self.subTest(host=host), patch.dict(
+                os.environ,
+                {"DSA_WEBUI_BOUND_HOST": host, "DSA_ALLOW_INSECURE_PUBLIC_API": "true"},
+                clear=False,
+            ), patch("api.middlewares.auth.is_auth_enabled", return_value=False):
+                response = asyncio.run(middleware.dispatch(request, call_next))
+
+            self.assertEqual(response.status_code, 200)
+            call_next.assert_awaited_once()
+
     def test_public_bind_from_request_server_host_rejects_api_when_auth_disabled(self) -> None:
         scope = {
             "type": "http",
@@ -550,6 +607,25 @@ class AuthApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'"error":"public_bind_requires_auth"', response.body)
         self.assertIn("ADMIN_AUTH_ENABLED=true", self.env_path.read_text(encoding="utf-8"))
+
+    def test_auth_settings_rejects_disable_on_public_bind_alias_without_override(self) -> None:
+        for host in ["0", "0:0:0:0:0:0:0:0"]:
+            with self.subTest(host=host), patch.dict(
+                os.environ,
+                {"DSA_WEBUI_BOUND_HOST": host, "DSA_ALLOW_INSECURE_PUBLIC_API": ""},
+                clear=False,
+            ), patch.object(auth, "_is_auth_enabled_from_env", side_effect=self._read_auth_enabled_from_env):
+                auth.set_initial_password("passwd6")
+                response = asyncio.run(
+                    auth_endpoint.auth_update_settings(
+                        self._build_request(),
+                        auth_endpoint.AuthSettingsRequest(authEnabled=False, currentPassword="passwd6"),
+                    )
+                )
+
+            self.assertEqual(response.status_code, 400)
+            self.assertIn(b'"error":"public_bind_requires_auth"', response.body)
+            self.assertIn("ADMIN_AUTH_ENABLED=true", self.env_path.read_text(encoding="utf-8"))
 
     def test_auth_settings_rejects_disable_for_remote_client_when_bound_host_unknown(self) -> None:
         request = self._build_request()

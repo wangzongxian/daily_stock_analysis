@@ -191,10 +191,15 @@ class MainScheduleModeTestCase(unittest.TestCase):
         self.assertFalse(should_skip_all)
 
     def test_public_webui_bind_fails_when_auth_is_disabled_without_override(self) -> None:
-        with patch.dict(os.environ, {"DSA_ALLOW_INSECURE_PUBLIC_API": ""}, clear=False), \
-             patch("src.auth.is_auth_enabled", return_value=False):
-            with self.assertRaisesRegex(RuntimeError, "ADMIN_AUTH_ENABLED=false"):
-                main._enforce_public_webui_auth_guard("0.0.0.0")
+        for host in ["0.0.0.0", "0", "0:0:0:0:0:0:0:0"]:
+            with self.subTest(host=host):
+                with patch.dict(
+                    os.environ,
+                    {"DSA_ALLOW_INSECURE_PUBLIC_API": ""},
+                    clear=False,
+                ), patch("src.auth.is_auth_enabled", return_value=False):
+                    with self.assertRaisesRegex(RuntimeError, "ADMIN_AUTH_ENABLED=false"):
+                        main._enforce_public_webui_auth_guard(host)
 
     def test_public_webui_bind_allows_env_only_auth_when_env_file_is_missing(self) -> None:
         missing_env = Path(self.temp_dir.name) / "missing.env"
