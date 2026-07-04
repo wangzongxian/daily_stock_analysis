@@ -123,8 +123,10 @@ class IntelligenceService:
     """Fetch, validate, persist and query configurable intelligence sources."""
 
     _auto_fetch_lock = threading.Lock()
+    _auto_fetch_condition = threading.Condition(_auto_fetch_lock)
     _auto_fetch_in_progress = False
     _auto_fetch_last_run_at: Optional[datetime] = None
+    _auto_fetch_last_result: Optional[Dict[str, Any]] = None
 
     def __init__(self, repository: Optional[IntelligenceRepository] = None):
         self.repo = repository or IntelligenceRepository()
@@ -132,9 +134,11 @@ class IntelligenceService:
 
     @classmethod
     def reset_auto_fetch_state(cls) -> None:
-        with cls._auto_fetch_lock:
+        with cls._auto_fetch_condition:
             cls._auto_fetch_in_progress = False
             cls._auto_fetch_last_run_at = None
+            cls._auto_fetch_last_result = None
+            cls._auto_fetch_condition.notify_all()
 
     def create_source(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         fields = self._normalize_source_fields(payload)
@@ -303,9 +307,13 @@ class IntelligenceService:
 
         now = datetime.now()
         cls = type(self)
-        with cls._auto_fetch_lock:
-            if cls._auto_fetch_in_progress:
-                return {"ok": True, "skipped": True, "reason": "in_progress"}
+        with cls._auto_fetch_condition:
+            waited_for_in_progress = False
+            while cls._auto_fetch_in_progress:
+                waited_for_in_progress = True
+                cls._auto_fetch_condition.wait()
+            if waited_for_in_progress and cls._auto_fetch_last_result is not None:
+                return dict(cls._auto_fetch_last_result)
             if (
                 not force
                 and cls._auto_fetch_last_run_at is not None
@@ -314,6 +322,7 @@ class IntelligenceService:
                 return {"ok": True, "skipped": True, "reason": "cooldown"}
             cls._auto_fetch_in_progress = True
 
+        result: Dict[str, Any]
         try:
             bootstrap = self.ensure_default_sources_enabled()
             fetch = self.fetch_enabled_sources()
@@ -332,15 +341,17 @@ class IntelligenceService:
                 bootstrap.get("enabled_count"),
                 bootstrap.get("error_count"),
             )
-            return result
         except Exception as exc:
             error = self._sanitize_error(exc)
             logger.warning("Intelligence auto fetch failed (fail-open): %s", error)
-            return {"ok": False, "skipped": False, "error": error}
+            result = {"ok": False, "skipped": False, "error": error}
         finally:
-            with cls._auto_fetch_lock:
+            with cls._auto_fetch_condition:
                 cls._auto_fetch_last_run_at = datetime.now()
+                cls._auto_fetch_last_result = dict(result)
                 cls._auto_fetch_in_progress = False
+                cls._auto_fetch_condition.notify_all()
+        return result
 
     def _normalize_source_fields(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         name = str(payload.get("name") or "").strip()

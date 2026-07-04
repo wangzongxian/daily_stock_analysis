@@ -7,7 +7,10 @@ import os
 import json
 import socket
 import tempfile
+import threading
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from urllib.parse import quote
 from unittest.mock import Mock, patch
@@ -394,6 +397,72 @@ class IntelligenceServiceTestCase(unittest.TestCase):
         self.assertTrue(second["skipped"])
         self.assertEqual(second["reason"], "cooldown")
         mock_get.assert_not_called()
+
+    def test_refresh_auto_sources_waits_for_in_flight_fetch_before_reading_items(self) -> None:
+        self.service.config.news_intel_auto_fetch_enabled = True
+        fetch_started = threading.Event()
+        release_fetch = threading.Event()
+        second_refresh_started = threading.Event()
+
+        def fake_fetch_enabled_sources():
+            fetch_started.set()
+            self.assertTrue(release_fetch.wait(2))
+            now = datetime.now()
+            saved = self.service.repo.upsert_items([
+                {
+                    "source_name": "auto-feed",
+                    "source_type": "rss",
+                    "title": "Auto fetched market item",
+                    "summary": "Available to every concurrent analysis after refresh.",
+                    "url": "https://news.example.com/auto-fetch",
+                    "source": "auto-feed",
+                    "published_at": now,
+                    "fetched_at": now,
+                    "scope_type": "market",
+                    "scope_value": None,
+                    "market": "cn",
+                }
+            ])
+            return {"ok": True, "source_count": 1, "results": [], "saved_count": saved}
+
+        def refresh_then_count(started_event=None):
+            if started_event is not None:
+                started_event.set()
+            result = self.service.refresh_auto_sources()
+            total = self.service.list_items(scope_type="market", market="cn")["total"]
+            return result, total
+
+        with (
+            patch.object(
+                IntelligenceService,
+                "ensure_default_sources_enabled",
+                return_value={"created_count": 1, "enabled_count": 0, "error_count": 0},
+            ),
+            patch.object(
+                IntelligenceService,
+                "fetch_enabled_sources",
+                side_effect=fake_fetch_enabled_sources,
+            ) as fetch_mock,
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            first = executor.submit(refresh_then_count)
+            try:
+                self.assertTrue(fetch_started.wait(2))
+                second = executor.submit(refresh_then_count, second_refresh_started)
+                self.assertTrue(second_refresh_started.wait(2))
+                time.sleep(0.1)
+                self.assertFalse(second.done())
+            finally:
+                release_fetch.set()
+
+            first_result, first_total = first.result(timeout=2)
+            second_result, second_total = second.result(timeout=2)
+
+        self.assertTrue(first_result["ok"])
+        self.assertTrue(second_result["ok"])
+        self.assertEqual(first_total, 1)
+        self.assertEqual(second_total, 1)
+        self.assertEqual(fetch_mock.call_count, 1)
 
     def test_same_url_can_be_saved_for_different_scopes(self) -> None:
         market = self.service.create_source({
