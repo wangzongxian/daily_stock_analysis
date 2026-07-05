@@ -91,11 +91,11 @@ function writeFile(filePath: string, content: string): void {
   fs.writeFileSync(filePath, content);
 }
 
-async function buildRealComponentFixture(testInfo: TestInfo): Promise<{
+async function buildRealComponentFixture(): Promise<{
   distIndexPath: string;
   entryPath: string;
 }> {
-  const fixtureDir = testInfo.outputPath('market-structure-card-fixture');
+  const fixtureDir = path.join(webRoot, 'test-results', 'market-structure-card-visual');
   const distDir = path.join(fixtureDir, 'dist');
   const entryPath = path.join(fixtureDir, 'MarketStructureVisualApp.tsx');
   const htmlPath = path.join(fixtureDir, 'index.html');
@@ -182,7 +182,7 @@ async function attachDesktopScreenshotArtifact(distIndexPath: string, testInfo: 
     if (!isMissingPlaywrightBrowser(error)) {
       throw error;
     }
-    const notePath = testInfo.outputPath('market-structure-card-screenshot-skipped.txt');
+    const notePath = path.join(path.dirname(path.dirname(distIndexPath)), 'market-structure-card-screenshot-skipped.txt');
     writeFile(
       notePath,
       [
@@ -211,7 +211,7 @@ async function attachDesktopScreenshotArtifact(distIndexPath: string, testInfo: 
     await expect(card.getByText('个股位置层')).toBeVisible();
     await expect(card.getByText(/机器人概念 \+4\.20%/)).toBeVisible();
 
-    const screenshotPath = testInfo.outputPath('market-structure-card-desktop.png');
+    const screenshotPath = path.join(path.dirname(path.dirname(distIndexPath)), 'market-structure-card-desktop.png');
     await card.screenshot({ path: screenshotPath });
     await testInfo.attach('market-structure-card-desktop-png', {
       path: screenshotPath,
@@ -229,7 +229,7 @@ test.describe('MarketStructureCard visual evidence', () => {
   ) => {
     expect(browserName).toBe('chromium');
 
-    const { distIndexPath, entryPath } = await buildRealComponentFixture(testInfo);
+    const { distIndexPath, entryPath } = await buildRealComponentFixture();
     expect(fs.existsSync(distIndexPath)).toBe(true);
 
     await testInfo.attach('market-structure-card-real-component-entry', {
