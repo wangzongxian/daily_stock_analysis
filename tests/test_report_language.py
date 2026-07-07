@@ -42,6 +42,11 @@ class ReportLanguageTestCase(unittest.TestCase):
         self.assertEqual(get_signal_level("", 66, "zh"), ("买入", "🟢", "buy"))
         self.assertEqual(get_signal_level("", 72, "zh"), ("买入", "🟢", "buy"))
 
+    def test_get_signal_level_maps_guard_actions_before_score_fallback(self) -> None:
+        self.assertEqual(get_signal_level("回避", 72, "zh"), ("回避", "🟡", "hold"))
+        self.assertEqual(get_signal_level("Alert", 72, "en"), ("Alert", "🟡", "hold"))
+        self.assertEqual(infer_decision_type_from_advice("风险预警", default="buy"), "hold")
+
     def test_get_localized_stock_name_replaces_placeholder_for_english(self) -> None:
         self.assertEqual(
             get_localized_stock_name("股票AAPL", "AAPL", "en"),
